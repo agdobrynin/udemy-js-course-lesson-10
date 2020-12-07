@@ -1,0 +1,29 @@
+body {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+.card .card-title {
+  background-color: rgba(0, 0, 0, 0.66);
+  padding: 0.3rem !important;
+}
+
+.card .card-image {
+  height: 20rem;
+  overflow: hidden;
+}
+
+.card .card-content {
+  height: 8rem;
+  overflow: hidden;
+}
+
+#toast-container {
+  top: 10%;
+  right: 0;
+}

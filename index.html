@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News App</title>
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+</head>
+
+<body>
+    <main>
+        <nav>
+            <div class="nav-wrapper"><a href="#!" class="brand-logo">News App</a></div>
+        </nav>
+        <div class="progress hide">
+            <div class="indeterminate"></div>
+        </div>
+        <div class="row">
+            <form class="col s12" name="article-search">
+                <div class="row">
+                    <div class="input-field col m4 s12">
+                        <select name="country">
+                            <option value="ru">Russia</option>
+                            <option value="us">USA</option>
+                        </select>
+                        <label>News form country</label>
+                    </div>
+                    <div class="input-field col m4 s12">
+                        <select name="category">
+                            <option value="">All news</option>
+                            <option value="business">Business news</option>
+                            <option value="entertainment">Entertainment news</option>
+                            <option value="general">General news</option>
+                            <option value="health">Health news</option>
+                            <option value="science">Science news</option>
+                            <option value="sports">Sport news</option>
+                            <option value="technology">Technology news</option>
+                        </select>
+                        <label>Category news</label>
+                    </div>
+                    <div class="input-field col m4 s12">
+                        <i class="material-icons prefix">search</i>
+                        <input placeholder="Input yours query" name="q" type="text">
+                        <label>Search query</label>
+                    </div>
+                    <div class="input-field col s12 right-align">
+                        <button class="btn waves-effect waves-light" type="submit" name="action">Search
+                            <i class="material-icons right">send</i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="row" id="articles-result"></div>
+    </main>
+    <footer class="page-footer">
+        <div class="footer-copyright">
+            <div class="container">
+                © 2020 Copyright Text
+                <a class="grey-text text-lighten-4 right" href="#!">More Links</a>
+            </div>
+        </div>
+    </footer>
+    <script src="app.js"></script>
+</body>
+
+</html>
