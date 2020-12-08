@@ -1,18 +1,31 @@
 const newsService = (function () {
 
+    /**
+     * API KEY
+     */
     const apiKey = "fc7c07b764284839bbd3515bc49d7edf";
+    /**
+     * API endpint
+     */
     const apiEndpoint = "https://news-api-v2.herokuapp.com";
 
+    /**
+     * Mandatory params for each request to endpint
+     */
     const paramsQuery = {
         apiKey
     };
 
+    /**
+     * Defaut mandatory headers for each request to endpint
+     */
     const headers = {
         "Content-type": "application/json; charset=UTF-8",
     };
 
-    // язык запроса по коду страны
+    // Language in news default
     const defaultCountryCode = "ru";
+    // Get language in news by country code
     const countryToLanguage = {
         ru: "ru",
         us: "en",
@@ -35,12 +48,12 @@ const newsService = (function () {
         return url + (url.indexOf("?") === -1 ? "?" : "&") + queryString.join("&");
     }
 
-    async function request(url, params = {}) {
+    async function request(url, params = {}, fetchConfig = {}) {
         try {
             params.language = countryToLanguage[params.country] || "";
             url = buildQueryUrl(url, { ...params, ...paramsQuery });
 
-            return await fetch(url, { headers }).then(async (res) => {
+            return await fetch(url, { ...fetchConfig, ...headers }).then(async (res) => {
                 if (!res.ok) {
                     try {
                         const json = await res.json();
@@ -56,12 +69,21 @@ const newsService = (function () {
         }
     }
 
+    /**
+     * Get top news by params.
+     * @param {object} params Additional query string parameters such as Category, Country and etc.
+     */
     const topNews = async (params) => {
         if (!params?.country) params.country = defaultCountryCode;
 
         return request(`${apiEndpoint}/top-headlines`, params);
     }
 
+    /**
+     * Search news by key word
+     * @param {string} q Search word
+     * @param {object} params Additional query string parameters such as Category, Country and etc.
+     */
     const searchNews = async (q, params = {}) => request(`${apiEndpoint}/everything`, { q, ...params });
 
     return {
@@ -131,7 +153,6 @@ function preloader(show) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    preloader(true);
     M.AutoInit();
 
     const newsContainer = document.querySelector("#articles-result");
@@ -151,30 +172,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     form.addEventListener("submit", async (event) => {
-        preloader(true);
+
         event.preventDefault();
         const queryParams = {
             country: form["country"]?.value,
             category: form["category"]?.value,
         };
 
+        preloader(true);
         let result = null;
 
         if (form["q"]?.value) {
-            result = await newsService.searchNews(form["q"]?.value, queryParams).catch(error => showToast(error));
+            result = await newsService.searchNews(form["q"]?.value, queryParams).catch(error => showToast(error)).finally(() => preloader(false));
         } else {
-            result = await newsService.topNews(queryParams).catch(error => showToast(error));
+            result = await newsService.topNews(queryParams).catch(error => showToast(error)).finally(() => preloader(false));
         }
-        renderResponse(result, newsContainer);
 
-        preloader(false);
+        renderResponse(result, newsContainer);
     });
 
     const queryParams = {
         country: form["country"]?.value,
         category: form["category"]?.value,
     };
-
-    newsService.topNews(queryParams).then(articles => renderResponse(articles, newsContainer)).catch(error => showToast(error));
-    preloader(false);
+    preloader(true);
+    newsService.topNews(queryParams).then(articles => renderResponse(articles, newsContainer)).catch(error => showToast(error)).finally(() => preloader(false));
 });
