@@ -1,83 +1,4 @@
-function customHttp() {
-
-    const init = function (method = "GET", url, headers = {}) {
-        const xhr = new XMLHttpRequest();
-        xhr.open(method, url);
-        Object.entries(headers).forEach(([key, value]) => {
-            xhr.setRequestHeader(key, value);
-        });
-
-        return xhr;
-    }
-
-    const request = function (xhr, callback) {
-        xhr.addEventListener("load", () => {
-            if (Math.floor(xhr.status / 100) !== 2) {
-                const msg = `Статус: ${xhr.status}. Ошибка: ${xhr.statusText || `Обращение к ресурсу ${endpoint}`}`;
-                callback(msg, xhr);
-
-                return;
-            }
-            callback(null, JSON.parse(xhr.responseText));
-        });
-
-        xhr.addEventListener("error", () => {
-            const msg = `Статус: ${xhr.status}. Ошибка: ${xhr.statusText || `Обращение к ресурсу ${endpoint}`}`;
-            callback(msg, xhr);
-        });
-    }
-
-    function buildQueryUrl(url, params) {
-        if (!(params instanceof Object)) {
-            return url;
-        }
-
-        if (Object.keys(params).length === 0) {
-            return url;
-        }
-
-        let queryString = [];
-        Object.entries(params).forEach(([key, value]) => {
-            queryString.push(encodeURIComponent(key) + "=" + encodeURIComponent(value));
-        });
-
-        return url + (url.indexOf("?") === -1 ? "?" : "&") + queryString.join("&");
-    }
-
-    /**
-     * @param {String} url
-     * @param {object} queryStringParams
-     * @param {callback} callback
-     * @param {object} headers 
-     */
-    const get = function (url, queryStringParams, callback, headers = {}) {
-        endpoint = buildQueryUrl(url, queryStringParams);
-        const xhr = init("GET", endpoint, headers);
-        request(xhr, callback);
-        xhr.send();
-    }
-
-    /**
-     * @param {String} url
-     * @param {object} body
-     * @param {callback} callback
-     * @param {object} headers
-     * @param {object} queryStringParams
-     */
-    const post = function (url, body, callback, headers = {}, queryStringParams = {}) {
-        endpoint = buildQueryUrl(url, queryStringParams);
-        const xhr = init("POST", url, headers);
-        request(xhr, callback);
-        xhr.send(JSON.stringify(body));
-    }
-
-    return {
-        get,
-        post,
-    }
-}
-
-const newsService = (function (http) {
+const newsService = (function () {
 
     const apiKey = "fc7c07b764284839bbd3515bc49d7edf";
     const apiEndpoint = "https://news-api-v2.herokuapp.com";
@@ -97,52 +18,74 @@ const newsService = (function (http) {
         us: "en",
     };
 
-    function tryGetError(err, res) {
+    function buildQueryUrl(url, params) {
+        if (!(params instanceof Object)) {
+            return url;
+        }
+
+        if (Object.keys(params).length === 0) {
+            return url;
+        }
+
+        let queryString = [];
+        Object.entries(params).forEach(([key, value]) => {
+            queryString.push(encodeURIComponent(key) + "=" + encodeURIComponent(value));
+        });
+
+        return url + (url.indexOf("?") === -1 ? "?" : "&") + queryString.join("&");
+    }
+
+    async function request(url, params = {}) {
         try {
-            err = JSON.parse(res.responseText)?.message || err;
-        } catch (e) { }
-        return err;
+            params.language = countryToLanguage[params.country] || "";
+            url = buildQueryUrl(url, { ...params, ...paramsQuery });
+
+            return await fetch(url, { headers }).then(async (res) => {
+                if (!res.ok) {
+                    try {
+                        const json = await res.json();
+                        return Promise.reject(`Error in request: ${json?.message || res.statusText}`);
+                    } catch {
+                        return Promise.reject(`Error code: ${res.status} ${res.statusText} when get from url ${url}`);
+                    }
+                }
+                return res.json();
+            });
+        } catch (error) {
+            return Promise.reject(error);
+        }
     }
 
-    /**
-     * @param {object} params
-     * @param {callback} callback
-     */
-    const topNews = (params, callback) => {
+    const topNews = async (params) => {
         if (!params?.country) params.country = defaultCountryCode;
-        params.language = countryToLanguage[params.country] || "";
 
-        http.get(`${apiEndpoint}/top-headlines`, { ...params, ...paramsQuery }, (err, res) => {
-            if (err) {
-                err = `Топ новостей: ${tryGetError(err, res)}`;
-            }
-            callback(err, res);
-        }, headers);
+        return request(`${apiEndpoint}/top-headlines`, params);
     }
 
-    /**
-     * @param {String} q
-     * @param {object} params
-     * @param {callback} callback
-     */
-    const searchNews = (q, params = {}, callback) => {
-        params.language = countryToLanguage[params.country] || "";
-
-        http.get(`${apiEndpoint}/everything`, { q, ...params, ...paramsQuery }, (err, res) => {
-            if (err) {
-                err = `Поиск новостей: ${tryGetError(err, res)}`;
-            }
-            callback(err, res);
-        }, headers);
-    }
+    const searchNews = async (q, params = {}) => request(`${apiEndpoint}/everything`, { q, ...params });
 
     return {
         topNews,
         searchNews,
-    }
-})(customHttp());
+    };
+})();
 
-// Рендер ответа в HTML
+
+/**
+ * @param {HTMLElement} newsContainer
+ */
+function clearNewsContainer(newsContainer) {
+    let child = newsContainer.lastChild;
+    while (child) {
+        newsContainer.removeChild(child);
+        child = newsContainer.lastChild;
+    }
+}
+
+function showToast(html, classes = 'red darken-4') {
+    M.toast({ html, classes });
+}
+
 function renderCard(article) {
     const { urlToImage: image, url, title = "", description = "" } = article;
 
@@ -171,26 +114,7 @@ function buildCardList(articles) {
     return articles.reduce((acc, article) => acc + renderCard(article), "");
 }
 
-/**
- * @param {HTMLElement} newsContainer
- */
-function clearNewsContainer(newsContainer) {
-    let child = newsContainer.lastChild;
-    while (child) {
-        newsContainer.removeChild(child);
-        child = newsContainer.lastChild;
-    }
-}
-
-function showToast(html, classes = 'red darken-4') {
-    M.toast({ html, classes });
-}
-
-function renderResponse(err, response, newsContainer) {
-    preloader(false);
-    if (err) {
-        return showToast(err);
-    }
+function renderResponse(response, newsContainer) {
     const articles = response?.articles || [];
     clearNewsContainer(newsContainer);
     if (articles.length === 0) {
@@ -206,7 +130,7 @@ function preloader(show) {
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     preloader(true);
     M.AutoInit();
 
@@ -226,18 +150,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
         preloader(true);
         event.preventDefault();
         const queryParams = {
             country: form["country"]?.value,
             category: form["category"]?.value,
         };
+
+        let result = null;
+
         if (form["q"]?.value) {
-            newsService.searchNews(form["q"]?.value, queryParams, (err, res) => renderResponse(err, res, newsContainer));
+            result = await newsService.searchNews(form["q"]?.value, queryParams).catch(error => showToast(error));
         } else {
-            newsService.topNews(queryParams, (err, res) => renderResponse(err, res, newsContainer));
+            result = await newsService.topNews(queryParams).catch(error => showToast(error));
         }
+        renderResponse(result, newsContainer);
+
+        preloader(false);
     });
 
     const queryParams = {
@@ -245,5 +175,6 @@ document.addEventListener("DOMContentLoaded", () => {
         category: form["category"]?.value,
     };
 
-    newsService.topNews(queryParams, (err, res) => renderResponse(err, res, newsContainer));
+    newsService.topNews(queryParams).then(articles => renderResponse(articles, newsContainer)).catch(error => showToast(error));
+    preloader(false);
 });
